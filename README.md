@@ -61,7 +61,7 @@ Track users and see their latest state from Discord:
 ```
 
 <p align="center">
-  <img src="docs/images/board.png" alt="Alicia Tracker board" width="700">
+  <img src="docs/images/track-list.png" alt="Alicia Tracker track list" width="700">
 </p>
 
 ### 🔔 Discord alerts
@@ -80,7 +80,11 @@ Configure a default notification channel, then override it for individual users 
 ```
 
 <p align="center">
-  <img src="docs/images/alert.png" alt="Alicia Tracker Discord alert" width="600">
+  <img src="docs/images/game-left.png" alt="Alicia Tracker game left alert" width="600">
+</p>
+
+<p align="center">
+  <img src="docs/images/game-join.png" alt="Alicia Tracker game join alert" width="700">
 </p>
 
 ### 👥 See who is playing together
@@ -99,10 +103,6 @@ PlayerThree
 ↳ Same server instance
 ```
 
-<p align="center">
-  <img src="docs/images/together.png" alt="Alicia Tracker together command" width="600">
-</p>
-
 ### 📊 Keep history
 
 Alicia does not only show what is happening right now.
@@ -114,10 +114,6 @@ Each tracked user gets a readable history containing presence events, games, and
 /stats ExampleUser
 /topgames ExampleUser
 ```
-
-<p align="center">
-  <img src="docs/images/history.png" alt="Alicia Tracker history" width="600">
-</p>
 
 ## Why Alicia Tracker?
 
