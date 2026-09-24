@@ -41,15 +41,15 @@ It is designed for a single Discord server and does not require a database or we
 
 ## Features
 
-### 👤 Roblox presence tracking
+### Roblox presence tracking
 
 Track users and see their latest state from Discord:
 
-- 🟢 Online
-- 🎮 In-game
-- ⚫ Offline
-- ⏸️ Paused
-- ⚠️ Problem or unresolved state
+- Online
+- In-game
+- Offline
+- Paused
+- Problem or unresolved state
 
 ```text
 /board view:all
@@ -64,7 +64,7 @@ Track users and see their latest state from Discord:
   <img src="docs/images/watchlist.png" alt="Alicia Tracker watchlist" width="480">
 </p>
 
-### 🔔 Discord alerts
+### Discord alerts
 
 Get notified when tracked users change activity.
 
@@ -87,7 +87,7 @@ Configure a default notification channel, then override it for individual users 
   <img src="docs/images/game-join.png" alt="Alicia Tracker game join alert" width="540">
 </p>
 
-### 👥 See who is playing together
+### See who is playing together
 
 `/together` groups tracked users who are currently in the same Roblox server instance.
 
@@ -100,10 +100,10 @@ ExampleUser
 PlayerTwo
 PlayerThree
 
-↳ Same server instance
+Same server instance
 ```
 
-### 📊 Keep history
+### Keep history
 
 Alicia does not only show what is happening right now.
 
