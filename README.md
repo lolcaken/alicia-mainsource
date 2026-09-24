@@ -2,8 +2,6 @@
   <img src="docs/images/logo.png" alt="Alicia Tracker logo" width="160">
 </p>
 
-<h1 align="center">Alicia Tracker</h1>
-
 <p align="center">
   <strong>Discord-first Roblox presence tracking with isolated user storage, unlimited segmented history, crash-safe imports, alert inheritance, and filtered live boards.</strong>
 </p>
@@ -26,6 +24,24 @@
 - Unicode Roblox usernames and transactional folder renames.
 - Existing export/import compatibility with stricter backup validation.
 
+## Filtered live board
+
+`/board` now supports safe filters:
+
+```text
+/board view:all
+/board view:ingame
+/board view:online
+/board view:offline
+/board view:paused
+/board view:issues
+```
+
+- Paused users show `paused` instead of stale presence data.
+- `issues` includes unresolved users, missing snapshots, and account failures.
+- Long rows are escaped, truncated safely, and split across valid Discord embeds.
+- One board command performs at most one tracker poll.
+
 ## Alert inheritance
 
 Server notification settings now work as real defaults.
@@ -42,6 +58,40 @@ Server notification settings now work as real defaults.
 - Resetting one type restores only that server default.
 - Omitting the type resets every personal alert override.
 - `/track info` and `/tracker inspect` show the effective value and its source.
+
+## Storage engine
+
+```text
+data/
+  manifest.json
+  settings.json
+  accounts.json
+  users/
+    Ayyobabablacksheep/
+      profile.json
+      status.json
+      history.jsonl
+      games.json
+      errors.jsonl
+  backups/
+  removed-users/
+  .transactions/
+```
+
+### Data behavior
+
+- Startup reads global files and user profiles first.
+- Status, history, games, and errors load only when accessed.
+- Limited history commands read log tails without loading every segment.
+- Exports and full statistics load every segment.
+- Active `history.jsonl` and `errors.jsonl` rotate at 5 MiB by default.
+- Segments use timestamped names and are never deleted automatically.
+- Setting `MAX_HISTORY_PER_USER` to a positive number enables an optional active-history cap.
+- `LOG_SEGMENT_MAX_BYTES` controls the rotation threshold.
+
+### Downgrade behavior
+
+Storage schema version remains `2`, so 2.5.6 can read 2.5.5 data directly. After log rotation, downgrading to 2.5.5 shows the active tail while older segments remain stored on disk.
 
 ## Reliability
 
