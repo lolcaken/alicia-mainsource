@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/logo.png" alt="Alicia Tracker logo" width="150">
+  <img src="docs/images/logo.png" alt="Alicia Tracker logo" width="120">
 </p>
 
 <h1 align="center">Alicia Tracker</h1>
@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/board.png" alt="Alicia Tracker live board" width="700">
+  <img src="docs/images/board.png" alt="Alicia Tracker live board" width="420">
 </p>
 
 ## What is Alicia Tracker?
@@ -61,7 +61,7 @@ Track users and see their latest state from Discord:
 ```
 
 <p align="center">
-  <img src="docs/images/track-list.png" alt="Alicia Tracker track list" width="700">
+  <img src="docs/images/watchlist.png" alt="Alicia Tracker watchlist" width="480">
 </p>
 
 ### 🔔 Discord alerts
@@ -80,11 +80,11 @@ Configure a default notification channel, then override it for individual users 
 ```
 
 <p align="center">
-  <img src="docs/images/game-left.png" alt="Alicia Tracker game left alert" width="600">
+  <img src="docs/images/game-left.png" alt="Alicia Tracker game left alert" width="500">
 </p>
 
 <p align="center">
-  <img src="docs/images/game-join.png" alt="Alicia Tracker game join alert" width="700">
+  <img src="docs/images/game-join.png" alt="Alicia Tracker game join alert" width="540">
 </p>
 
 ### 👥 See who is playing together
