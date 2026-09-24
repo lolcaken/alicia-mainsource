@@ -256,24 +256,6 @@ docs/images/         README visuals
 server.js            HTTP health host and process lifecycle
 ```
 
-## Version history
-
-### 2.5.6
-
-- Transactional and fail-closed storage
-- Lazy and segmented per-user logs
-- Status/account write reduction
-- Session timing and cache optimization
-- Alert inheritance and reset
-- Filtered, Discord-safe status boards
-
-### 2.5.5
-
-- Per-user storage folders
-- Status, history, games, and errors separated by user
-- Automatic legacy migration
-- Unlimited logs and username-folder renames
-
 ## Important
 
 Alicia Tracker is intentionally locked to one configured Discord guild. If it joins another guild, it leaves automatically. Only use authentication credentials for accounts you control.
