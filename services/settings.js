@@ -1,6 +1,5 @@
 // services/settings.js
-// Reads/writes the subset of .env that the dashboard (and now the bot's
-// /settings and /notify commands) are allowed to edit at runtime.
+// Legacy helper for reading and patching the supported subset of .env values.
 //
 // IMPORTANT: setEnv() preserves every key already in .env — including ones
 // it doesn't know about (DISCORD_BOT_TOKEN, DISCORD_CLIENT_ID, etc.) — and

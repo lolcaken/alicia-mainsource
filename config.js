@@ -1,8 +1,6 @@
 // config.js
-// DEFAULT_USERNAME is only used to seed the watchlist the very first time
-// the app runs (an empty data/users.json). After that, the watchlist is
-// fully editable from the dashboard — add/remove as many usernames as you
-// want. This never re-adds or protects the default after the first boot.
+// DEFAULT_USERNAME is retained as a legacy first-run seed. The active watchlist
+// is managed by the Discord bot and persisted under data/users/<username>/.
 
 module.exports = {
   DEFAULT_USERNAME: 'ally_cutie142',

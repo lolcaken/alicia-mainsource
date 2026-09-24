@@ -207,12 +207,6 @@ deploy.bat
 
 The script refuses unknown or changed SSH host keys and never disables host verification.
 
-After upload, restart the service in ACLClouds. The archive is written to:
-
-```text
-%USERPROFILE%\Downloads\alicia tracker archive\alicia-tracker-v2.5.6.zip
-```
-
 ## Testing
 
 ```bash
@@ -250,11 +244,15 @@ The native test suite covers:
 ```text
 bot/                 Discord commands and event handling
 services/            Storage, tracker, Roblox API, embeds, logging
-public/              Optional static dashboard assets
 test/                Native assertion test suite
 docs/images/         README visuals
 server.js            HTTP health host and process lifecycle
+LICENSE              MIT license
 ```
+
+## License
+
+Released under the [MIT License](LICENSE).
 
 ## Important
 

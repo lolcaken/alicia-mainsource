@@ -24,7 +24,7 @@ if not exist "%ALICIA_DEPLOY_KNOWN_HOSTS%" (
 for /f "delims=" %%v in ('node -p "require(process.cwd() + '/package.json').version"') do set VER=%%v
 set ARCHIVE_DIR=%USERPROFILE%\Downloads\alicia tracker archive
 if not exist "%ARCHIVE_DIR%" mkdir "%ARCHIVE_DIR%"
-powershell -NoProfile -Command "Compress-Archive -Path bot, services, public, test, docs, config.js, package.json, README.md, server.js, .gitignore, deploy.bat -DestinationPath '%ARCHIVE_DIR%\alicia-tracker-v%VER%.zip' -Force"
+powershell -NoProfile -Command "Compress-Archive -Path bot, services, test, docs, config.js, package.json, README.md, server.js, .gitignore, deploy.bat -DestinationPath '%ARCHIVE_DIR%\alicia-tracker-v%VER%.zip' -Force"
 if errorlevel 1 (
   echo [ERROR] Archive creation failed.
   exit /b 1
@@ -40,7 +40,6 @@ set "DISPLAY=localhost:0"
 (
   echo put -r bot
   echo put -r services
-  echo put -r public
   echo put -r test
   echo put config.js
   echo put package.json
