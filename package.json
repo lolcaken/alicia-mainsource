@@ -1,0 +1,21 @@
+{
+  "name": "alicia-tracker",
+  "version": "2.5.6",
+  "description": "Single-server Discord Roblox presence tracker with resilient per-user storage.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node test/run-checks.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}
