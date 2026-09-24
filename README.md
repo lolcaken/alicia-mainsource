@@ -1,32 +1,129 @@
 <p align="center">
-  <img src="docs/images/logo.png" alt="Alicia Tracker logo" width="160">
+  <img src="docs/images/logo.png" alt="Alicia Tracker logo" width="140">
+</p>
+
+<h1 align="center">Alicia Tracker</h1>
+
+<p align="center">
+  <strong>Discord-first Roblox presence tracking with per-user storage that stays readable.</strong>
 </p>
 
 <p align="center">
-  <strong>Discord-first Roblox presence tracking with isolated user storage, unlimited segmented history, crash-safe imports, alert inheritance, and filtered live boards.</strong>
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#commands">Commands</a> ·
+  <a href="#storage">Storage</a> ·
+  <a href="#deployment">Deploy</a>
 </p>
 
-<p align="center">
-  <code>Node.js 18+</code> · <code>discord.js 14</code> · <code>No database required</code>
-</p>
+## The short version
 
-## Highlights
+| Default | Value |
+| --- | ---: |
+| Discord servers | 1 |
+| Tracked users | 50 |
+| Files per user | 5 |
+| History and error retention | Unlimited |
 
-- Single-server Discord architecture with guild-scoped slash commands.
-- Private per-user folders for profile, status, history, games, and errors.
-- Unlimited history and error logs stored in rotating JSONL segments.
-- Transactional full writes and imports with automatic rollback backups.
-- Fail-closed handling for corrupt, incomplete, or newer storage layouts.
-- Lazy per-user log loading for faster startup and lower memory use.
-- Fewer unchanged status and account writes.
-- O(1) active-session timing with persisted session state.
-- Bounded metadata caches and retrying storage flushes.
-- Unicode Roblox usernames and transactional folder renames.
-- Existing export/import compatibility with stricter backup validation.
+Alicia Tracker watches Roblox presence, sends Discord alerts, groups players by server instance, and stores every tracked user in a separate folder. It is built for one configured Discord server and does not require a database.
+
+## Why use it?
+
+- **Readable by user:** profile, status, history, games, and errors stay isolated per Roblox username.
+- **Safe during imports:** full writes are staged, backed up, and recovered after interruption.
+- **Fast on large histories:** logs load lazily and rotate into unlimited JSONL segments.
+- **Useful at 50 users:** live boards support focused views for in-game, online, offline, paused, and problem states.
+- **Simple to operate:** Discord slash commands handle configuration; no web dashboard is required.
+
+## Quick start
+
+### 1. Requirements
+
+- Node.js 18 or newer
+- A Discord application with the `bot` and `applications.commands` scopes
+- Access to the target guild, alert channels, and server members
+
+### 2. Install
+
+```bash
+npm install
+```
+
+### 3. Configure
+
+Create a private `.env` file:
+
+```dotenv
+DISCORD_BOT_TOKEN=your-bot-token
+DISCORD_GUILD_ID=your-discord-guild-id
+PORT=3000
+HOST=127.0.0.1
+LOG_ACCESS_TOKEN=choose-a-long-random-log-token
+```
+
+Never commit `.env`, cookies, `data/`, backups, or logs.
+
+### 4. Start
+
+```bash
+npm start
+```
+
+The first startup creates the storage layout automatically. Legacy `state.json` and `guilds.json` migrations create a backup before conversion.
+
+### 5. Configure Discord
+
+Run these commands in the target server:
+
+```text
+/setup
+/notify channel
+/cookie add
+/track add
+```
+
+Use `/track usernotify` when one user needs a dedicated alert channel.
+
+## Commands
+
+### Presence
+
+| Command | Result |
+| --- | --- |
+| `/track add` | Track a Roblox username |
+| `/track list` | List tracked users and linked accounts |
+| `/track pause` / `/track resume` | Stop or resume polling for one user |
+| `/track info` | Show profile, account, channel, and effective alerts |
+| `/status <username>` | Show one user's latest presence |
+| `/board` | Show the filtered live board |
+| `/together` | Group users currently in the same server instance |
+| `/poll now` | Run an immediate tracker poll |
+
+### Alerts
+
+| Command | Result |
+| --- | --- |
+| `/notify channel` | Set the default alert channel |
+| `/track usernotify` | Route one user to a dedicated channel |
+| `/track usernotify-clear` | Return one user to the default channel |
+| `/track alerts` | Override one alert type for one user |
+| `/track alerts-reset` | Restore server-default alert behavior |
+| `/notify test` | Send a safe test notification |
+
+### Diagnostics and data
+
+| Command | Result |
+| --- | --- |
+| `/tracker inspect` | Show detailed live state for one user |
+| `/stats <username>` | Summarize events and linked-account state |
+| `/history <username>` | Read a user's recent history tail |
+| `/topgames <username>` | Summarize playtime from complete history |
+| `/health` | Show Roblox API and tracker health |
+| `/export` | Download a complete private JSON backup |
+| `/import` | Validate and transactionally restore a backup |
+
+Sensitive or mutating commands require **Manage Server**.
 
 ## Filtered live board
-
-`/board` now supports safe filters:
 
 ```text
 /board view:all
@@ -37,29 +134,30 @@
 /board view:issues
 ```
 
-- Paused users show `paused` instead of stale presence data.
+- `paused` never displays stale presence as current.
 - `issues` includes unresolved users, missing snapshots, and account failures.
-- Long rows are escaped, truncated safely, and split across valid Discord embeds.
 - One board command performs at most one tracker poll.
+- Long names and rows are escaped and split across valid Discord embeds.
 
 ## Alert inheritance
 
-Server notification settings now work as real defaults.
+Server settings are defaults. A user only stores an alert value when they intentionally override it.
 
 ```text
 /settings notifications type:Game Leave enabled:false
-/track alerts username:Ayyobablacksheep type:Game Leave enabled:true
-/track alerts-reset username:Ayyobabablacksheep type:Game Leave
-/track alerts-reset username:Ayyobabablacksheep
+/track alerts username:ExampleUser type:Game Leave enabled:true
+/track alerts-reset username:ExampleUser type:Game Leave
+/track alerts-reset username:ExampleUser
 ```
 
-- New users start with no personal overrides.
-- Explicit user values override server defaults.
-- Resetting one type restores only that server default.
-- Omitting the type resets every personal alert override.
-- `/track info` and `/tracker inspect` show the effective value and its source.
+- New users inherit every server default.
+- `/track info` and `/tracker inspect` show the effective value and whether it comes from the user or server.
+- Resetting one type restores only that setting.
+- Omitting the type resets every personal override.
 
-## Storage engine
+## Storage
+
+Alicia Tracker keeps global configuration separate from user data:
 
 ```text
 data/
@@ -67,7 +165,7 @@ data/
   settings.json
   accounts.json
   users/
-    Ayyobabablacksheep/
+    ExampleUser/
       profile.json
       status.json
       history.jsonl
@@ -78,96 +176,52 @@ data/
   .transactions/
 ```
 
-### Data behavior
+<details>
+<summary><strong>Storage behavior and safety</strong></summary>
 
-- Startup reads global files and user profiles first.
+### Lazy loading
+
+- Startup reads the manifest, settings, accounts, and user profiles.
 - Status, history, games, and errors load only when accessed.
-- Limited history commands read log tails without loading every segment.
-- Exports and full statistics load every segment.
-- Active `history.jsonl` and `errors.jsonl` rotate at 5 MiB by default.
-- Segments use timestamped names and are never deleted automatically.
-- Setting `MAX_HISTORY_PER_USER` to a positive number enables an optional active-history cap.
-- `LOG_SEGMENT_MAX_BYTES` controls the rotation threshold.
+- Limited history commands read the newest log segments.
+- Exports and full statistics read every segment.
 
-### Downgrade behavior
+### Segmented logs
 
-Storage schema version remains `2`, so 2.5.6 can read 2.5.5 data directly. After log rotation, downgrading to 2.5.5 shows the active tail while older segments remain stored on disk.
+- Active logs use `history.jsonl` and `errors.jsonl`.
+- Files rotate at 5 MiB by default into timestamped archives.
+- Segments are never deleted automatically.
+- `LOG_SEGMENT_MAX_BYTES` changes the rotation threshold.
+- A positive `MAX_HISTORY_PER_USER` enables an optional cap.
+
+### Failure protection
+
+- Missing, malformed, incomplete, or newer storage layouts stop startup instead of being replaced with empty defaults.
+- Imports validate users, accounts, IDs, usernames, duplicates, and account references before writing.
+- Full writes create a private backup and a staged transaction.
+- Interrupted transactions recover on the next startup.
+- Failed flushes retry with bounded exponential backoff.
+- Removing a user archives their folder under `removed-users/`.
+
+</details>
+
+Storage schema version remains `2`, so 2.5.6 reads 2.5.5 data directly. After log rotation, downgrading to 2.5.5 shows the active tail while older segments remain stored on disk.
 
 ## Reliability
 
-- Existing storage is never silently replaced by empty defaults.
-- Missing or malformed required files stop startup instead of risking data loss.
-- Future storage versions are refused with a clear compatibility error.
-- Imports validate users, accounts, IDs, username uniqueness, and account references before writing.
-- Every full write creates a private pre-write backup and staged transaction.
-- Interrupted transactions recover on the next startup.
-- Flush failures retry with bounded exponential backoff.
-- Graceful shutdown flushes pending writes.
-- Discord login retries transient network and rate-limit failures.
+- Discord login retries network failures and rate limits.
 - Roblox API degradation holds last-known states instead of fabricating offline events.
+- Poll failures use bounded backoff and never create mass false transitions.
+- Tracker metadata caches are pruned and session timing does not scan complete history.
+- Graceful shutdown flushes pending writes.
+- The health endpoint reports readiness, poll state, API health, and failure counts.
 
-## Requirements
-
-- Node.js 18 or newer
-- A Discord application with the `bot` and `applications.commands` scopes
-- Permission to view the target guild, channels, and members
-- Permission to send messages in configured alert channels
-
-## Quick start
-
-```bash
-npm install
-```
-
-Create private runtime variables:
-
-```dotenv
-DISCORD_BOT_TOKEN=your-bot-token
-DISCORD_GUILD_ID=your-discord-guild-id
-PORT=3000
-HOST=127.0.0.1
-LOG_ACCESS_TOKEN=choose-a-long-random-log-token
-```
-
-Start the bot:
-
-```bash
-npm start
-```
-
-The first startup creates the v2 storage layout automatically. Legacy `state.json` and `guilds.json` migrations create backups before conversion.
-
-## Commands
-
-| Command | Purpose |
-| --- | --- |
-| `/setup` | Confirm the configured server is ready |
-| `/track add` | Track a Roblox username |
-| `/track list` | List tracked users and links |
-| `/track pause` / `/track resume` | Pause or resume tracking |
-| `/track alerts` | Set a personal alert override |
-| `/track alerts-reset` | Restore server-default alerts |
-| `/track usernotify` | Route one user to a dedicated channel |
-| `/board` | Show the filtered live status board |
-| `/together` | Group tracked users in the same server instance |
-| `/topgames` | Summarize playtime from complete history |
-| `/stats` | Show event and account statistics |
-| `/history` | Read a user's recent history tail |
-| `/cookie` | Manage Roblox cookie accounts |
-| `/notify` | Configure global and user channels |
-| `/tracker inspect` | Inspect detailed live state |
-| `/health` | Show API and polling health |
-| `/export` | Create a complete private JSON backup |
-| `/import` | Validate and transactionally restore a backup |
-
-Sensitive and mutating commands require **Manage Server**.
-
-## Environment variables
+## Configuration
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `DISCORD_BOT_TOKEN` | Required | Discord bot token |
-| `DISCORD_GUILD_ID` | Required | Only Discord guild the bot may serve |
+| `DISCORD_GUILD_ID` | Required | Only guild the bot may serve |
 | `PORT` | `3000` | Health and protected logs HTTP port |
 | `HOST` | `127.0.0.1` | Health server bind address |
 | `LOG_ACCESS_TOKEN` | Disabled | Required token for `/logs` |
@@ -182,7 +236,10 @@ Sensitive and mutating commands require **Manage Server**.
 
 `deploy.bat` uploads code only. It never uploads `.env`, `data/`, backups, cookies, or logs.
 
-Set deployment connection variables in your private shell or environment:
+<details>
+<summary><strong>SFTP deployment commands</strong></summary>
+
+Set private deployment variables:
 
 ```bat
 set ALICIA_DEPLOY_HOST=your-host
@@ -191,13 +248,15 @@ set ALICIA_DEPLOY_PORT=2022
 set ALICIA_DEPLOY_PASSWORD=your-password
 ```
 
-Verify the host key in `%USERPROFILE%\.ssh\known_hosts` before running:
+Verify the host key in `%USERPROFILE%\.ssh\known_hosts`, then run:
 
 ```bat
 deploy.bat
 ```
 
-The script refuses unknown or changed SSH host keys and never disables host verification.
+The script refuses unknown or changed SSH host keys.
+
+</details>
 
 ## Testing
 
@@ -205,31 +264,17 @@ The script refuses unknown or changed SSH host keys and never disables host veri
 npm test
 ```
 
-The native test suite covers:
-
-- Legacy migration and backup creation
-- Corrupt and future-version fail-closed behavior
-- Invalid import rejection
-- Transaction staging and full-state replacement
-- History caps without duplicate appends
-- Unlimited segmented history and errors
-- Remove/re-add and rename write races
-- Unicode usernames
-- Alert inheritance and reset persistence
-- Filtered and character-safe board rendering
-- Tracker state transitions and status write reduction
-- Logger redaction
+The suite covers migration, corruption refusal, transactional imports, segmented history, remove/re-add and rename races, Unicode usernames, alert inheritance, board filtering, status write reduction, and logger redaction.
 
 ## Security
 
-- `.env`, `data/`, backups, logs, and `node_modules/` are ignored by Git.
-- Account cookies remain in `data/accounts.json` with restrictive file permissions.
+- Treat `.ROBLOSECURITY` values as passwords.
+- Account cookies remain in `data/accounts.json` with restrictive permissions.
 - Error contexts redact cookie, token, password, secret, and authorization fields.
 - Commands and embeds never print complete cookies.
 - `/logs` returns `404` unless `LOG_ACCESS_TOKEN` is configured and matched.
 - The health server binds to `127.0.0.1` by default.
-- Treat `.ROBLOSECURITY` values as passwords.
-- Rotate credentials immediately if they are ever exposed.
+- Rotate credentials immediately if they are exposed.
 
 ## Project structure
 
@@ -237,7 +282,7 @@ The native test suite covers:
 bot/                 Discord commands and event handling
 services/            Storage, tracker, Roblox API, embeds, logging
 test/                Native assertion test suite
-docs/images/         README visuals
+docs/images/         README logo
 server.js            HTTP health host and process lifecycle
 LICENSE              MIT license
 ```
@@ -246,6 +291,4 @@ LICENSE              MIT license
 
 Released under the [MIT License](LICENSE).
 
-## Important
-
-Alicia Tracker is intentionally locked to one configured Discord guild. If it joins another guild, it leaves automatically. Only use authentication credentials for accounts you control.
+Alicia Tracker is intentionally locked to one configured Discord guild. If it joins another guild, it leaves automatically.
