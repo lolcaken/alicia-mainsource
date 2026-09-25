@@ -457,7 +457,7 @@ async function handle(i, client) {
     }
   }
   if (name === 'uptime') return i.reply(`${I.clock} Uptime: **${formatDuration(process.uptime() * 1000)}**`);
-  if (name === 'about') return i.reply({ embeds: [new EmbedBuilder().setTitle('Alicia Tracker v2.5.6').setDescription('Resilient single-server Roblox presence tracker.').setColor(BRAND).addFields({ name: 'Servers', value: String(1), inline: true }, { name: 'Node', value: process.version, inline: true }, { name: 'Storage', value: 'Segmented per-user files', inline: true })] });
+  if (name === 'about') return i.reply({ embeds: [new EmbedBuilder().setTitle('Alicia Tracker v2.5.7').setDescription('Resilient single-server Roblox presence tracker.').setColor(BRAND).addFields({ name: 'Servers', value: String(1), inline: true }, { name: 'Node', value: process.version, inline: true }, { name: 'Storage', value: 'Segmented per-user files', inline: true })] });
   if (name === 'status') return status(i, tracker, store);
   if (name === 'board') return board(i, tracker, store);
   if (name === 'together') return together(i, tracker, store);

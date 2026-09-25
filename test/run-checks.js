@@ -164,7 +164,7 @@ console.log('[check] Store user-channel operations passed.');
     stdio: 'ignore',
   });
   assert(fs.existsSync(path.join(transactionData, 'users', 'ImportedUser', 'profile.json')), 'valid import must commit staged user data');
-  assert(fs.readdirSync(path.join(transactionData, 'backups')).some(name => name.startsWith('pre-full-2.5.6-')), 'valid import must create pre-write backup');
+  assert(fs.readdirSync(path.join(transactionData, 'backups')).some(name => name.startsWith('pre-full-2.5.7-')), 'valid import must create pre-write backup');
   assert(!fs.existsSync(path.join(transactionData, 'full-write.pending.json')), 'successful import must clear transaction journal');
   fs.rmSync(transactionRoot, { recursive: true, force: true });
 
@@ -212,7 +212,7 @@ console.log('[check] Store user-channel operations passed.');
   assert(migratedHistory.includes('Legacy Game'));
   assert(Object.values(migratedGames.games).some(game => game.gameName === 'Legacy Game'));
   assert(!fs.existsSync(path.join(migrationData, 'state.json')), 'legacy state.json must leave runtime after migration');
-  assert(fs.readdirSync(path.join(migrationData, 'backups')).some(file => file.includes('before-v2.5.6')), 'legacy state backup missing');
+  assert(fs.readdirSync(path.join(migrationData, 'backups')).some(file => file.includes('before-v2.5.7')), 'legacy state backup missing');
   fs.rmSync(migrationRoot, { recursive: true, force: true });
 
   const futureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'alicia-future-'));

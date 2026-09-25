@@ -1,6 +1,6 @@
 {
   "name": "alicia-tracker",
-  "version": "2.5.6",
+  "version": "2.5.7",
   "description": "Single-server Discord Roblox presence tracker with resilient per-user storage.",
   "main": "server.js",
   "type": "commonjs",

@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { validateUsername, validateChannel } = require('./validators');
 
-const APP_VERSION = '2.5.6';
+const APP_VERSION = '2.5.7';
 const STORAGE_VERSION = 2;
 const DATA_DIR = path.resolve(process.env.ALICIA_DATA_DIR || path.join(__dirname, '..', 'data'));
 const USERS_DIR = path.join(DATA_DIR, 'users');
