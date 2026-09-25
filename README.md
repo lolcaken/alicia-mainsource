@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="#features">Features</a> ·
-  <a href="#quick-start">Quick start</a> ·
+  <a href="#setup">Setup</a> ·
   <a href="#commands">Commands</a> ·
   <a href="#storage">Storage</a> ·
   <a href="#deployment">Deploy</a>
@@ -157,65 +157,160 @@ History is stored in segmented JSONL files.
 - Limited history commands only read the newest required segments.
 - Full exports and statistics can read the complete history.
 
-## Quick start
+## Setup
 
-### Requirements
+Complete these steps in order. Alicia Tracker is locked to one Discord guild, so create and test the bot in that server first.
 
-- Node.js 18 or newer
-- A Discord application
-- A Discord bot with:
-  - `bot`
-  - `applications.commands`
-- Access to the target Discord server
+### 1. Create the Discord bot
 
-### 1. Install
+1. Open the Discord Developer Portal and create a new application.
+2. Open **Bot**, add a bot, and copy its token. Resetting the token later invalidates the old value.
+3. Open **OAuth2 > URL Generator** and select these scopes:
+   - `bot`
+   - `applications.commands`
+4. Give the bot these server permissions:
+   - View Channels
+   - Send Messages
+   - Embed Links
+   - Use Application Commands
+5. Open the generated invite URL and add the bot to the target server.
+6. In Discord User Settings, enable **Developer Mode**. Right-click the server, choose **Copy Server ID**, and save it.
+
+You do not need to grant Manage Server to the bot. Alicia uses that permission to restrict configuration commands to server administrators.
+
+### 2. Prepare the project
+
+Requirements:
+
+| Requirement | Version |
+| --- | --- |
+| Node.js | 18 or newer |
+| npm | Included with Node.js |
+| Discord server | One configured guild |
+| Roblox account | Optional, but required for full presence data |
+
+From the project directory:
 
 ```bash
+node --version
 npm install
 ```
 
-### 2. Configure
+Confirm the first command prints Node.js 18 or newer before continuing.
 
-Create a private `.env` file:
+### 3. Configure runtime values
+
+Create a private `.env` file in the project root:
 
 ```dotenv
-DISCORD_BOT_TOKEN=your-bot-token
-DISCORD_GUILD_ID=your-discord-guild-id
+DISCORD_BOT_TOKEN=the-token-from-the-discord-bot-page
+DISCORD_GUILD_ID=the-copied-server-id
 PORT=3000
 HOST=127.0.0.1
-LOG_ACCESS_TOKEN=choose-a-long-random-log-token
+LOG_ACCESS_TOKEN=choose-a-long-random-token
 ```
 
-Never commit:
+Generate a log token with Node.js:
 
-- `.env`
-- `data/`
-- `backups/`
-- Cookies
-- Logs
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
 
-### 3. Start
+`HOST=127.0.0.1` keeps the health server local. Set `HOST=0.0.0.0` only when your host must reach the health endpoint from outside the container.
+
+Never commit `.env`, `data/`, backups, cookies, or logs.
+
+### 4. Start Alicia Tracker
 
 ```bash
 npm start
 ```
 
-The first startup creates the storage layout automatically.
+Keep the terminal running. Stop Alicia with `Ctrl+C`; the shutdown handler flushes pending storage writes.
 
-Legacy `state.json` and `guilds.json` migrations create a backup before conversion.
-
-### 4. Configure Discord
-
-Run:
+A successful startup should show messages similar to:
 
 ```text
-/setup
-/notify channel
-/cookie add
-/track add
+[alicia-tracker] health server listening on port 3000
+[bot] logged in as ...
+[bot] synchronized ... guild commands
+[bot] ready: Server Name (...)
 ```
 
-The bot is locked to the configured Discord guild. If it is added to another guild, it leaves automatically.
+Verify the health endpoint from another local terminal:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:3000/health
+```
+
+A ready installation reports `"ready": true` and `"ok": true`.
+
+### 5. Complete Discord setup
+
+Run these commands in the target server:
+
+| Order | Command | What it does |
+| --- | --- | --- |
+| 1 | `/setup` | Confirms the bot can access the configured guild |
+| 2 | `/notify channel` | Selects the default alert channel |
+| 3 | `/cookie add` | Adds a Roblox account used for presence requests |
+| 4 | `/track add` | Adds a Roblox username and optionally links that account |
+| 5 | `/notify test` | Sends a test alert |
+| 6 | `/track list` | Confirms the user and account are linked |
+| 7 | `/board` | Opens the filtered live status board |
+
+A Roblox `.ROBLOSECURITY` cookie is a live login credential. Use an account you control, never share the cookie, and replace it through `/cookie replace` if it is exposed.
+
+### 6. Optional per-user routing
+
+Give one tracked user a dedicated alert channel:
+
+```text
+/track usernotify username:ExampleUser
+```
+
+Return that user to the server default:
+
+```text
+/track usernotify-clear username:ExampleUser
+```
+
+### ACLClouds or panel hosting
+
+1. Upload the source code without `.env` or `data/`.
+2. Run `npm install` once in the panel terminal.
+3. Add the runtime values from Step 3 to the panel's private environment settings.
+4. Set the startup command to `npm start`.
+5. Start or restart the service.
+6. Confirm the health endpoint and run `/health` in Discord.
+
+Use the Deployment section later for code-only SFTP updates. Runtime data stays on the host.
+
+### First-run checklist
+
+- [ ] Bot token copied into `DISCORD_BOT_TOKEN`
+- [ ] Correct server ID copied into `DISCORD_GUILD_ID`
+- [ ] Bot invited with `bot` and `applications.commands` scopes
+- [ ] Bot can view and send in the alert channel
+- [ ] `npm install` completed successfully
+- [ ] Startup reaches `[bot] ready`
+- [ ] `/health` reports ready
+- [ ] `/notify test` succeeds
+- [ ] One tracked user appears in `/track list`
+- [ ] `/board` renders the tracked user
+
+### Common setup problems
+
+| Problem | Cause | Fix |
+| --- | --- | --- |
+| Bot stays offline | Missing or invalid bot token | Verify `DISCORD_BOT_TOKEN` and restart |
+| Configured guild is not accessible | Wrong guild ID or bot was not invited | Copy the server ID again and confirm membership |
+| Slash commands do not appear | Missing OAuth scope, missing application command permission, or old command cache | Reinvite with both scopes, grant permissions, and restart the bot |
+| `/notify test` cannot send | Bot lacks channel access | Grant View Channels, Send Messages, and Embed Links |
+| Users show no snapshot | No Roblox account is linked | Add with `/cookie add`, then link it through `/track add` |
+| Health port is already in use | Another process owns `PORT` | Change `PORT` and restart |
+| `/logs` returns `404` | `LOG_ACCESS_TOKEN` is missing or wrong | Set it and send the value in the `X-Log-Token` header |
+| Storage refuses to start | Existing data is malformed, incomplete, or newer | Preserve `data/`, read the error, and restore the matching backup instead of deleting files |
 
 ## Commands
 
