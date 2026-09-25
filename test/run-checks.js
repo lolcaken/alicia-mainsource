@@ -307,33 +307,17 @@ assert(notifySubs.includes('test'));
 assert(notifySubs.includes('status'));
 
 const pingCmd = commands.find(c => c.name === 'ping').toJSON();
-const pingSubs = pingCmd.options.map(o => o.name);
-assert(pingSubs.includes('latency'));
-assert(pingSubs.includes('tiktok-channel-clear'));
+assert.strictEqual(pingCmd.options.length, 0, 'ping must be a single latency command');
 
 const settingsCmd = commands.find(c => c.name === 'settings').toJSON();
-const settingsSubs = settingsCmd.options.map(o => o.name);
-assert(settingsSubs.includes('notifications'), 'settings notifications subcommand missing');
-const notifSub = settingsCmd.options.find(o => o.name === 'notifications');
-const notifOpts = notifSub.options.map(o => o.name);
-assert(notifOpts.includes('type'), 'settings notifications missing type');
-assert(notifOpts.includes('enabled'), 'settings notifications missing enabled');
-assert.strictEqual(notifSub.options.find(o => o.name === 'type').required, false, 'type should be optional');
-assert.strictEqual(notifSub.options.find(o => o.name === 'enabled').required, false, 'enabled should be optional');
-const notifTypes = notifSub.options.find(o => o.name === 'type').choices.map(c => c.value);
-for (const t of ['online', 'offline', 'gameJoin', 'gameChange', 'gameLeave']) {
-  assert(notifTypes.includes(t), `settings notifications type missing ${t}`);
+const settingsOptions = settingsCmd.options.map(o => o.name);
+for (const option of ['interval', 'alert_type', 'alert_value', 'game_only', 'server_info', 'ally_ping', 'tiktok', 'tiktok_channel', 'quiet', 'quiet_minutes', 'compact_links']) {
+  assert(settingsOptions.includes(option), `settings option missing: ${option}`);
 }
-
-const toggleSub = settingsCmd.options.find(o => o.name === 'toggle');
-assert(toggleSub, 'settings toggle subcommand missing');
-const toggleOpts = toggleSub.options.map(o => o.name);
-assert(toggleOpts.includes('name'), 'settings toggle missing name option');
-assert(toggleOpts.includes('enabled'), 'settings toggle missing enabled option');
-const toggleNames = toggleSub.options.find(o => o.name === 'name').choices.map(c => c.value);
-for (const t of ['allyping', 'gameonly', 'serverinfo', 'tiktok', 'quiet', 'compactlinks']) {
-  assert(toggleNames.includes(t), `settings toggle name missing ${t}`);
-}
+assert.strictEqual(settingsOptions.includes('notifications'), false, 'settings must not keep notification subcommand');
+assert.strictEqual(settingsOptions.includes('toggle'), false, 'settings must not keep toggle subcommand');
+assert.deepStrictEqual(settingsCmd.options.find(o => o.name === 'alert_type').choices.map(c => c.value), ['online', 'offline', 'gameJoin', 'gameChange', 'gameLeave']);
+assert.deepStrictEqual(settingsCmd.options.find(o => o.name === 'alert_value').choices.map(c => c.value), ['on', 'off']);
 
 const trackerCmd = commands.find(c => c.name === 'tracker').toJSON();
 const trackerSubs = trackerCmd.options.map(o => o.name);

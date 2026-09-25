@@ -328,6 +328,13 @@ Use the Deployment section later for code-only SFTP updates. Runtime data stays 
 | `/together` | Group users in the same server instance |
 | `/poll now` | Run an immediate tracker poll |
 
+### General
+
+| Command | Description |
+| --- | --- |
+| `/settings` | View or change every general setting |
+| `/ping` | Check bot and gateway latency |
+
 ### Alerts
 
 | Command | Description |
@@ -373,13 +380,23 @@ The board is designed for live use:
 
 ## Alert inheritance
 
-Server settings act as defaults.
-
-A user only stores an alert override when one is intentionally configured.
+Server settings act as defaults. Use the single `/settings` command for every general option:
 
 ```text
-/settings notifications type:Game Leave enabled:false
+/settings
+/settings interval:30000
+/settings alert_type:Game Leave alert_value:Off
+/settings game_only:True
+/settings server_info:True
+/settings ally_ping:False
+/settings tiktok:True tiktok_channel:#tiktok-alerts
+/settings quiet:True quiet_minutes:60
+/settings compact_links:True
 ```
+
+Running `/settings` with no options shows the current configuration. `/ping` now only measures bot and gateway latency.
+
+A user only stores an alert override when one is intentionally configured.
 
 ```text
 /track alerts \

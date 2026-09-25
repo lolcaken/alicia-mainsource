@@ -7,7 +7,7 @@ const {
   MessageFlags,
   ChannelType,
 } = require('discord.js');
-const { commands } = require('./commands');
+const { commands, loadLocalFeatures } = require('./commands');
 const { createStore } = require('../services/store');
 const { validateUsername, validateChannel, sameChannel } = require('../services/validators');
 const GUILD_ID = String(process.env.DISCORD_GUILD_ID || process.env.GUILD_ID || '').trim();
@@ -18,6 +18,7 @@ const { buildEmbed, buildComponents, buildBoardView, chunkDiscordLines, truncate
 
 const BRAND = 0x7c5cff;
 const I = { ok: '✓', no: '×', on: '●', off: '○', game: '◆', arrow: '→', dot: '•', gear: '⌘', clock: '◷' };
+const localFeatures = loadLocalFeatures();
 let tracker = null;
 let sender = null;
 let store = null;
@@ -291,6 +292,7 @@ async function initializeTargetGuild(client) {
   bindSender(client);
   if (!t.timer) t.start();
   startTiktokPoller(storeFor());
+  await localFeatures?.onReady?.({ client, store: storeFor(), tracker: t });
   initialized = true;
   console.log(`[bot] ready: ${safeGuildName(guild)} (${guild.id})`);
 }
@@ -398,6 +400,7 @@ async function handleAutocomplete(i) {
       value: a.id,
     }));
   }
+  if (!values.length && localFeatures?.autocomplete) values = await localFeatures.autocomplete(i, { store: s });
 
   const filtered = sanitizeChoices(values
     .filter(v => !query || v.name.toLowerCase().includes(query) || v.value.toLowerCase().includes(query)));
@@ -415,60 +418,17 @@ async function handle(i, client) {
   const name = i.commandName;
 
   const managing = ['setup', 'track', 'cookie', 'notify', 'settings', 'poll', 'tracker', 'export', 'import'].includes(name);
-  const allySub = name === 'ping' && ['ally', 'gameonly', 'serverinfo', 'tiktok', 'tiktok-channel', 'tiktok-channel-clear', 'quiet', 'compact-links'].includes(i.options.getSubcommand(false));
-  if ((managing || allySub) && !manage(i)) return i.reply({ content: `${I.no} You need the Manage Server permission.`, flags: MessageFlags.Ephemeral });
+  const localManaging = localFeatures?.managing?.includes(name) === true;
+  if ((managing || localManaging) && !manage(i)) return i.reply({ content: `${I.no} You need the Manage Server permission.`, flags: MessageFlags.Ephemeral });
+
+  if (localFeatures?.handleCommand) {
+    const handled = await localFeatures.handleCommand(i, { client, store, tracker });
+    if (handled) return handled;
+  }
 
   if (name === 'setup') return i.reply({ content: `${I.ok} Alicia Tracker is ready for **${safeGuildName(i.guild)}**. Start with \`/notify channel\` and \`/track add\`.`, flags: MessageFlags.Ephemeral });
   if (name === 'help') return help(i);
   if (name === 'ping') {
-    const sub = i.options.getSubcommand(false);
-    if (sub === 'ally') {
-      const enabled = i.options.getBoolean('enabled', true);
-      store.setAllyPing(enabled);
-      return i.reply({ content: `${I.ok} Ally @everyone burst is now **${enabled ? 'enabled' : 'disabled'}**.`, flags: MessageFlags.Ephemeral });
-    }
-    if (sub === 'gameonly') {
-      const enabled = i.options.getBoolean('enabled', true);
-      store.setGameOnly(enabled);
-      return i.reply({ content: `${I.ok} Game-only mode is now **${enabled ? 'enabled' : 'disabled'}**. Online/offline alerts are ${enabled ? '**silenced** (only game join/change/leave alerts)' : '**active**'}.`, flags: MessageFlags.Ephemeral });
-    }
-    if (sub === 'serverinfo') {
-      const enabled = i.options.getBoolean('enabled', true);
-      store.setServerInfo(enabled);
-      return i.reply({ content: `${I.ok} Server uptime + region on game alerts is now **${enabled ? 'enabled' : 'disabled'}**.`, flags: MessageFlags.Ephemeral });
-    }
-    if (sub === 'tiktok') {
-      const enabled = i.options.getString('enabled', true) === 'on';
-      const cur = store.getTiktokLive();
-      if (enabled === cur) return i.reply({ content: `${I.dot} Experimental TikTok LIVE tracking is already **${enabled ? 'on' : 'off'}**.`, flags: MessageFlags.Ephemeral });
-      store.setTiktokLive(enabled);
-      if (enabled) startTiktokPoller(store); else stopTiktokPoller();
-      return i.reply({ content: `${I.ok} Experimental TikTok LIVE tracking is now **${enabled ? 'on' : 'off'}**.`, flags: MessageFlags.Ephemeral });
-    }
-    if (sub === 'tiktok-channel') {
-      const channel = i.options.getChannel('channel', true);
-      if (channel.type === ChannelType.GuildCategory) return i.reply({ content: `${I.no} Cannot use a category channel.`, flags: MessageFlags.Ephemeral });
-      store.setTiktokChannel(channel.id);
-      return i.reply({ content: `${I.ok} TikTok LIVE alerts will post in <#${channel.id}>.`, flags: MessageFlags.Ephemeral });
-    }
-    if (sub === 'tiktok-channel-clear') {
-      store.setTiktokChannel(null);
-      return i.reply({ content: `${I.ok} Dedicated TikTok LIVE channel cleared.`, flags: MessageFlags.Ephemeral });
-    }
-    if (sub === 'quiet') {
-      const enabled = i.options.getString('enabled', true) === 'on';
-      const minutes = i.options.getInteger('minutes') || 0;
-      const already = store.getQuiet();
-      if (enabled === already && minutes === 0) return i.reply({ content: `${I.dot} Quiet mode is already **${enabled ? 'on' : 'off'}**.`, flags: MessageFlags.Ephemeral });
-      store.setQuiet(enabled, minutes);
-      const resume = enabled && minutes > 0 ? ` — will auto-resume in **${minutes}m**` : '';
-      return i.reply({ content: `${I.ok} Quiet mode is now **${enabled ? 'on' : 'off'}**. All alerts are ${enabled ? '**muted**' : '**active**'}${resume}.`, flags: MessageFlags.Ephemeral });
-    }
-    if (sub === 'compact-links') {
-      const enabled = i.options.getBoolean('enabled', true);
-      store.setCompactLinks(enabled);
-      return i.reply({ content: `${I.ok} Compact game/profile links in status embeds are now **${enabled ? 'on' : 'off'}**.`, flags: MessageFlags.Ephemeral });
-    }
     const sent = await i.reply({ content: `${I.clock} Measuring...`, fetchReply: true, flags: MessageFlags.Ephemeral });
     return i.editReply(`${I.ok} Bot **${Math.max(0, sent.createdTimestamp - i.createdTimestamp)}ms** ${I.dot} Gateway **${Math.max(0, i.client.ws.ping)}ms**`);
   }
@@ -537,7 +497,7 @@ function help(i) {
     { name: 'Accounts', value: '`/cookie add` · `/cookie list` · `/cookie test` · `/cookie toggle` · `/cookie rename` · `/cookie replace` · `/cookie remove`' },
     { name: 'Notifications', value: '`/notify channel` · `/notify user-channel-clear` · `/notify test` · `/notify clear` · `/notify status`' },
     { name: 'Insights', value: '`/board view:all|ingame|online|offline|paused|issues` · `/together` · `/topgames` · `/status` · `/stats` · `/history` · `/activity` · `/health`' },
-    { name: 'Settings', value: '`/settings interval` · `/settings notifications` · `/settings toggle` · `/settings show` · `/ping quiet` · `/ping compact-links`' },
+    { name: 'Settings', value: '`/settings` · `/ping`' },
     { name: 'Utility', value: '`/poll now` · `/ping` · `/uptime` · `/about`' },
   ).setFooter({ text: 'Sensitive and mutating commands require Manage Server.' })] });
 }
@@ -802,45 +762,68 @@ async function testNotifyUser(i, client, t, s, username) {
 }
 
 function settings(i, t, s) {
-  const sub = i.options.getSubcommand();
-  if (sub === 'interval') { const ms = i.options.getInteger('ms', true); s.setSettings({ intervalMs: ms }); t.setIntervalMs(ms); return i.reply({ content: `${I.ok} Poll interval: **${ms}ms**.`, flags: MessageFlags.Ephemeral }); }
-  if (sub === 'notifications') {
-    const type = i.options.getString('type');
-    const enabled = i.options.getBoolean('enabled');
-    const cur = s.getSettings().notifications || {};
-    if (!type && enabled != null) return i.reply({ content: `${I.no} Choose a notification type before setting enabled.`, flags: MessageFlags.Ephemeral });
-    if (type) {
-      if (enabled == null) return notifsReply(i, s, `Current value for **${notifLabel(type)}** is **${cur[type] !== false ? 'enabled' : 'disabled'}**.`);
-      s.setSettings({ notifications: { ...cur, [type]: !!enabled } });
-      return notifsReply(i, s, `${I.ok} **${notifLabel(type)}** notifications are now **${enabled ? 'enabled' : 'disabled'}**.`);
-    }
-    return notifsReply(i, s);
+  const interval = i.options.getInteger('interval');
+  const alertType = i.options.getString('alert_type');
+  const alertValue = i.options.getString('alert_value');
+  const gameOnly = i.options.getBoolean('game_only');
+  const serverInfo = i.options.getBoolean('server_info');
+  const allyPing = i.options.getBoolean('ally_ping');
+  const tiktok = i.options.getBoolean('tiktok');
+  const tiktokChannel = i.options.getChannel('tiktok_channel');
+  const quiet = i.options.getBoolean('quiet');
+  const quietMinutes = i.options.getInteger('quiet_minutes');
+  const compactLinks = i.options.getBoolean('compact_links');
+
+  if (alertValue && !alertType) return i.reply({ content: `${I.no} Choose an alert type before setting its value.`, flags: MessageFlags.Ephemeral });
+  if (alertType && !alertValue) return i.reply({ content: `${I.no} Choose On or Off for the selected alert type.`, flags: MessageFlags.Ephemeral });
+  if (quietMinutes != null && quiet !== true) return i.reply({ content: `${I.no} quiet_minutes requires quiet:True.`, flags: MessageFlags.Ephemeral });
+
+  const changes = [];
+  if (interval != null) {
+    s.setSettings({ intervalMs: interval });
+    t.setIntervalMs(interval);
+    changes.push(`interval ${interval}ms`);
   }
-  if (sub === 'toggle') {
-    const name = i.options.getString('name', true);
-    const enabled = i.options.getString('enabled', true) === 'on';
-    const act = {
-      allyping: () => { s.setAllyPing(enabled); },
-      gameonly: () => { s.setGameOnly(enabled); },
-      serverinfo: () => { s.setServerInfo(enabled); },
-      tiktok: () => {
-        const cur = s.getTiktokLive();
-        s.setTiktokLive(enabled);
-        if (enabled && !cur) startTiktokPoller(s);
-        if (!enabled && cur) stopTiktokPoller();
-      },
-      quiet: () => { s.setQuiet(enabled); },
-      compactlinks: () => { s.setCompactLinks(enabled); },
-    };
-    const label = { allyping: 'Ally burst ping', gameonly: 'Game-only mode', serverinfo: 'Server uptime + region', tiktok: 'TikTok LIVE tracking', quiet: 'Quiet mode', compactlinks: 'Compact links' }[name];
-    if (!act[name]) return i.reply({ content: `${I.no} Unknown toggle.`, flags: MessageFlags.Ephemeral });
-    act[name]();
-    return i.reply({ content: `${I.ok} **${label}** is now **${enabled ? 'on' : 'off'}**.`, flags: MessageFlags.Ephemeral });
+  if (alertType && alertValue) {
+    const current = s.getSettings().notifications || {};
+    s.setSettings({ notifications: { ...current, [alertType]: alertValue === 'on' } });
+    changes.push(`${notifLabel(alertType)} alerts ${alertValue}`);
   }
-  const x = s.getSettings(), m = t.getMeta();
+  if (gameOnly != null) { s.setGameOnly(gameOnly); changes.push(`game-only ${gameOnly ? 'on' : 'off'}`); }
+  if (serverInfo != null) { s.setServerInfo(serverInfo); changes.push(`server info ${serverInfo ? 'on' : 'off'}`); }
+  if (allyPing != null) { s.setAllyPing(allyPing); changes.push(`ally ping ${allyPing ? 'on' : 'off'}`); }
+  if (tiktok != null) {
+    const wasEnabled = s.getTiktokLive();
+    s.setTiktokLive(tiktok);
+    if (tiktok && !wasEnabled) startTiktokPoller(s);
+    if (!tiktok && wasEnabled) stopTiktokPoller();
+    changes.push(`tiktok ${tiktok ? 'on' : 'off'}`);
+  }
+  if (tiktokChannel) {
+    s.setTiktokChannel(tiktokChannel.id);
+    changes.push(`tiktok channel <#${tiktokChannel.id}>`);
+  }
+  if (quiet != null) {
+    s.setQuiet(quiet, quiet ? quietMinutes || 0 : 0);
+    changes.push(`quiet ${quiet ? `on${quietMinutes ? ` for ${quietMinutes}m` : ''}` : 'off'}`);
+  }
+  if (compactLinks != null) { s.setCompactLinks(compactLinks); changes.push(`compact links ${compactLinks ? 'on' : 'off'}`); }
+
+  if (!changes.length) return settingsOverview(i, t, s);
+  return i.reply({ content: `${I.ok} Updated ${changes.join(', ')}.\n\n${settingsText(t, s)}`, flags: MessageFlags.Ephemeral });
+}
+
+function settingsText(t, s) {
+  const x = s.getSettings();
+  const m = t.getMeta();
   const tt = s.getTiktokLive() ? s.getTiktokPoint() : 0;
   const ttHandles = s.getUsers().filter(u => u.tiktokHandle).length + (s.getTiktokWatch() || []).length;
-  return i.reply({ content: `${I.gear} Interval: **${x.intervalMs}ms**\n${I.dot} Alerts: ${x.notifyChannelId ? `<#${x.notifyChannelId}>` : 'not configured'}\n${I.dot} TikTok alerts: ${s.getTiktokChannel() ? `<#${s.getTiktokChannel()}>` : 'same as Alerts'}\n${I.dot} Tracked: **${m.tracked}**\n${I.dot} TikTok LIVE (experimental): **${s.getTiktokLive() ? 'on' : 'off'}**${tt ? ` every ${Math.round(tt / 1000)}s` : ''}${ttHandles ? `, ${ttHandles} linked` : ''}\n${I.dot} Quiet mode: **${s.getQuiet() ? 'on' : 'off'}**\n${I.dot} Compact links: **${s.getCompactLinks() ? 'on' : 'off'}**\n${I.dot} Failures: **${m.failedPollCount}**`, flags: MessageFlags.Ephemeral });
+  const alertTypes = Object.entries(x.notifications || {}).map(([key, value]) => `${notifLabel(key)} ${value === false ? 'off' : 'on'}`).join(', ');
+  return `${I.gear} Interval: **${x.intervalMs}ms**\n${I.dot} Alerts: ${x.notifyChannelId ? `<#${x.notifyChannelId}>` : 'not configured'}\n${I.dot} Server alerts: ${alertTypes}\n${I.dot} Game-only: **${s.getGameOnly() ? 'on' : 'off'}**\n${I.dot} Server info: **${s.getServerInfo() ? 'on' : 'off'}**\n${I.dot} Ally ping: **${s.getAllyPing() ? 'on' : 'off'}**\n${I.dot} TikTok LIVE: **${s.getTiktokLive() ? 'on' : 'off'}**${tt ? ` every ${Math.round(tt / 1000)}s` : ''}${ttHandles ? `, ${ttHandles} linked` : ''}\n${I.dot} TikTok channel: ${s.getTiktokChannel() ? `<#${s.getTiktokChannel()}>` : 'same as Alerts'}\n${I.dot} Quiet mode: **${s.getQuiet() ? 'on' : 'off'}**\n${I.dot} Compact links: **${s.getCompactLinks() ? 'on' : 'off'}**\n${I.dot} Failures: **${m.failedPollCount}**`;
+}
+
+function settingsOverview(i, t, s) {
+  return i.reply({ content: `${settingsText(t, s)}\n\nUse one \`/settings\` command with any option, for example \`/settings interval:30000\` or \`/settings quiet:True\`.`, flags: MessageFlags.Ephemeral });
 }
 
 function notifLabel(type) {
@@ -854,14 +837,6 @@ function effectiveAlertText(s, username) {
       return `${notifLabel(type)}: ${policy.enabled ? 'on' : 'off'} (${policy.source === 'user' ? 'user override' : 'server default'})`;
     })
     .join('\n');
-}
-
-function notifsReply(i, s, extra) {
-  const n = s.getSettings().notifications || {};
-  const lines = ['online', 'offline', 'gameJoin', 'gameChange', 'gameLeave']
-    .map(k => `${I.dot} **${notifLabel(k)}**: ${n[k] !== false ? 'enabled' : 'disabled'}`)
-    .join('\n');
-  return i.reply({ content: [extra, `${I.gear} Server notification toggles\n${lines}`].filter(Boolean).join('\n'), flags: MessageFlags.Ephemeral });
 }
 
 function trackerCmd(i, t, s) {

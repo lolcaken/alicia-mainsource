@@ -7,3 +7,4 @@ data/
 *.pem
 .playwright-mcp/
 errorlogsfordebug/
+local-features/

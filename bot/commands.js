@@ -2,6 +2,17 @@ const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require('disco
 const manage = b => b.setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild).setDMPermission(false);
 const guildOnly = b => b.setDMPermission(false);
 
+function loadLocalFeatures() {
+  try {
+    return require('../local-features');
+  } catch (error) {
+    if (error?.code === 'MODULE_NOT_FOUND' && String(error.message).includes('local-features')) return null;
+    throw error;
+  }
+}
+
+const localFeatures = loadLocalFeatures();
+
 const track = new SlashCommandBuilder().setName('track').setDescription('Manage this server watchlist')
   .addSubcommand(s => s.setName('add').setDescription('Track a Roblox username').addStringOption(o => o.setName('username').setDescription('Roblox username').setRequired(true).setAutocomplete(true)).addStringOption(o => o.setName('account').setDescription('Cookie account ID or label').setAutocomplete(true)))
   .addSubcommand(s => s.setName('remove').setDescription('Stop tracking').addStringOption(o => o.setName('username').setDescription('Tracked username').setRequired(true).setAutocomplete(true)))
@@ -39,26 +50,24 @@ const tracker = new SlashCommandBuilder().setName('tracker').setDescription('Liv
   .addSubcommand(s => s.setName('inspect').setDescription('Show detailed live tracker status').addStringOption(o => o.setName('username').setDescription('Tracked username').setRequired(true).setAutocomplete(true)))
   .addSubcommand(s => s.setName('refresh').setDescription('Force an immediate refresh for one user').addStringOption(o => o.setName('username').setDescription('Tracked username').setRequired(true).setAutocomplete(true)));
 
-const settings = new SlashCommandBuilder().setName('settings').setDescription('Configure this server')
-  .addSubcommand(s => s.setName('interval').setDescription('Set poll interval').addIntegerOption(o => o.setName('ms').setDescription('Minimum 5000ms').setMinValue(5000).setMaxValue(300000).setRequired(true)))
-  .addSubcommand(s => s.setName('notifications').setDescription('Toggle alert types for this server').addStringOption(o => o.setName('type').setDescription('Notification type').addChoices({ name: 'Online', value: 'online' }, { name: 'Offline', value: 'offline' }, { name: 'Game Join', value: 'gameJoin' }, { name: 'Game Change', value: 'gameChange' }, { name: 'Game Leave', value: 'gameLeave' })).addBooleanOption(o => o.setName('enabled').setDescription('Enabled (omit to show current)')))
-  .addSubcommand(s => s.setName('show').setDescription('Show settings'))
-  .addSubcommand(s => s.setName('toggle').setDescription('Turn any feature toggle on/off').addStringOption(o => o.setName('name').setDescription('Which toggle').setRequired(true).addChoices({ name: 'Ally burst ping', value: 'allyping' }, { name: 'Game-only mode', value: 'gameonly' }, { name: 'Server uptime + region', value: 'serverinfo' }, { name: 'TikTok LIVE tracking', value: 'tiktok' }, { name: 'Quiet mode', value: 'quiet' }, { name: 'Compact links', value: 'compactlinks' })).addStringOption(o => o.setName('enabled').setDescription('on or off').setRequired(true).addChoices({ name: 'on', value: 'on' }, { name: 'off', value: 'off' })))
+const settings = new SlashCommandBuilder().setName('settings').setDescription('View or change every Alicia setting')
+  .addIntegerOption(o => o.setName('interval').setDescription('Poll interval in milliseconds').setMinValue(5000).setMaxValue(300000))
+  .addStringOption(o => o.setName('alert_type').setDescription('Server alert type').addChoices({ name: 'Online', value: 'online' }, { name: 'Offline', value: 'offline' }, { name: 'Game Join', value: 'gameJoin' }, { name: 'Game Change', value: 'gameChange' }, { name: 'Game Leave', value: 'gameLeave' }))
+  .addStringOption(o => o.setName('alert_value').setDescription('Enable or disable the selected alert type').addChoices({ name: 'On', value: 'on' }, { name: 'Off', value: 'off' }))
+  .addBooleanOption(o => o.setName('game_only').setDescription('Only send game activity alerts'))
+  .addBooleanOption(o => o.setName('server_info').setDescription('Show server uptime and region'))
+  .addBooleanOption(o => o.setName('ally_ping').setDescription('Enable Ally burst ping'))
+  .addBooleanOption(o => o.setName('tiktok').setDescription('Enable TikTok LIVE tracking'))
+  .addChannelOption(o => o.setName('tiktok_channel').setDescription('Dedicated TikTok alert channel').addChannelTypes(ChannelType.GuildText))
+  .addBooleanOption(o => o.setName('quiet').setDescription('Mute all alerts'))
+  .addIntegerOption(o => o.setName('quiet_minutes').setDescription('Automatically resume after N minutes').setMinValue(1).setMaxValue(10080))
+  .addBooleanOption(o => o.setName('compact_links').setDescription('Show compact links in embeds'));
 
 
 const commands = [
   manage(new SlashCommandBuilder().setName('setup').setDescription('Initialize Alicia Tracker for this server')),
   guildOnly(new SlashCommandBuilder().setName('help').setDescription('Show Alicia Tracker commands')),
-  guildOnly(new SlashCommandBuilder().setName('ping').setDescription('Check bot latency + manage server toggles')
-  .addSubcommand(s => s.setName('latency').setDescription('Measure bot and gateway latency'))
-  .addSubcommand(s => s.setName('ally').setDescription('Toggle @everyone burst when Ally is the only tracked user in-game').addBooleanOption(o => o.setName('enabled').setDescription('On/off').setRequired(true)))
-  .addSubcommand(s => s.setName('gameonly').setDescription('Only send game join/change/leave alerts; silence online/offline').addBooleanOption(o => o.setName('enabled').setDescription('On/off').setRequired(true)))
-  .addSubcommand(s => s.setName('serverinfo').setDescription('Show server uptime/region on game join').addBooleanOption(o => o.setName('enabled').setDescription('On/off').setRequired(true)))
-  .addSubcommand(s => s.setName('tiktok').setDescription('Toggle TikTok LIVE tracking (experimental)').addStringOption(o => o.setName('enabled').setDescription('on or off').setRequired(true).addChoices({ name: 'on', value: 'on' }, { name: 'off', value: 'off' })))
-  .addSubcommand(s => s.setName('tiktok-channel').setDescription('Set a dedicated channel for TikTok LIVE alerts').addChannelOption(o => o.setName('channel').setDescription('Dedicated TikTok channel').setRequired(true)))
-  .addSubcommand(s => s.setName('tiktok-channel-clear').setDescription('Clear the dedicated TikTok LIVE channel'))
-  .addSubcommand(s => s.setName('quiet').setDescription('Mute all alerts (timed or until turned off)').addStringOption(o => o.setName('enabled').setDescription('on or off').setRequired(true).addChoices({ name: 'on', value: 'on' }, { name: 'off', value: 'off' })).addIntegerOption(o => o.setName('minutes').setDescription('Optional: auto-resume after N minutes').setMinValue(1).setMaxValue(1440)))
-  .addSubcommand(s => s.setName('compact-links').setDescription('Show clickable game/profile links in status embeds').addBooleanOption(o => o.setName('enabled').setDescription('On/off').setRequired(true)))),
+  guildOnly(new SlashCommandBuilder().setName('ping').setDescription('Check bot and gateway latency')),
   guildOnly(new SlashCommandBuilder().setName('uptime').setDescription('Show bot uptime')),
   guildOnly(new SlashCommandBuilder().setName('about').setDescription('Show bot information')),
   guildOnly(new SlashCommandBuilder().setName('health').setDescription('Show tracker health for this server')),
@@ -77,5 +86,6 @@ const commands = [
   guildOnly(new SlashCommandBuilder().setName('activity').setDescription('Show recent activity').addIntegerOption(o => o.setName('limit').setDescription('1-20').setMinValue(1).setMaxValue(20))),
   guildOnly(new SlashCommandBuilder().setName('together').setDescription('See which tracked users are in the same game right now')),
   guildOnly(new SlashCommandBuilder().setName('topgames').setDescription('Show a tracked user\'s most-played games').addStringOption(o => o.setName('username').setDescription('Roblox username').setRequired(true).setAutocomplete(true))),
+  ...(localFeatures?.commands || []),
 ];
-module.exports = { commands };
+module.exports = { commands, loadLocalFeatures };
